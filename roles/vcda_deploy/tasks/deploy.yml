@@ -1,0 +1,41 @@
+---
+# tasks file for vcda_deploy
+- name: Deploy "{{ item.0.name }}.{{ vcda.domain }}"
+  shell: |
+    ovftool \
+    --noSSLVerify \
+    --acceptAllEulas \
+    --X:enableHiddenProperties \
+    --datastore='{{ vcda.deployment.datastore }}' \
+    --allowAllExtraConfig  \
+    --network="{{ item.0.network }}" \
+    --name="{{ item.0.name }}.{{ vcda.domain }}" \
+    --vmFolder="{{ vcda.deployment.folder }}" \
+    --diskMode={{ item.0.disk_provisioning}} \
+    --prop:vm.name={{ item.0.name }}.{{ vcda.domain }} \
+    --prop:guestinfo.cis.appliance.root.password='{{ item.0.root_password }}' \
+    --prop:guestinfo.cis.appliance.net.ntp='{{ vcda.ntp }}' \
+    --prop:guestinfo.cis.appliance.role='{{ item.0.role }}' \
+    --prop:guestinfo.cis.appliance.ssh.enabled='{{ item.0.ssh_enabled }}' \
+    --prop:net.hostname={{ item.0.name }}.{{ vcda.domain }}  \
+    --prop:net.gateway={{ item.0.gateway }}  \
+    --prop:net.searchDomains={{ vcda.search_domain }}  \
+    --prop:net.dnsServers={{ vcda.dns }}  \
+    --prop:net.address={{ item.0.ip }}/{{ item.0.netmask_cidr }}  \
+    --prop:net.mtu={{ item.0.mtu | default('') }} \
+    --powerOn \
+    "{{ vcda.deployment.ova }}" \ 
+    vi://{{ vcda.deployment.vce.username }}:{{ vcda.deployment.vce.password }}@{{ vcda.deployment.vce.hostname }}/{{ vcda.deployment.datacenter }}/host/{{ vcda.deployment.cluster }}
+  ignore_errors: true
+
+- name: Connect to "{{ item.0.name }}.{{ vcda.domain }}" until status 200
+  uri:
+    url: https://{{ item.0.name }}.{{ vcda.domain }}
+    method: GET
+    status_code: 200
+    validate_certs: no
+    return_content: yes
+  until: vcda_result.status == 200 and vcda.check_pattern in vcda_result.content
+  retries: 100
+  delay: 15
+  register: vcda_result

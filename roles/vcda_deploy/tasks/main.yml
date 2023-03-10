@@ -1,0 +1,7 @@
+---
+# tasks file for vcda_deploy
+- include_tasks: deploy.yml
+  loop:
+    - "{{ vcda.tunnel }}"
+    - "{{ vcda.manager }}"
+    - "{{ vcda.replicator }}"
